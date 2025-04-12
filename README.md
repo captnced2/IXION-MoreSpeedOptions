@@ -1,4 +1,6 @@
 # More Speed Options
+[Nexusmods](https://www.nexusmods.com/ixion/mods/13)  
+<br>
 This mod adds two more speed options to the game, complete with buttons and hotkeys.  
 > [!WARNING]
 Both speeds (especially the fastest) can be a bit buggy so keep an eye on things while your game is sped up.  

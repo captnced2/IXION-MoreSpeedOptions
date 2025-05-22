@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using BepInEx;
-using BepInEx.Configuration;
 using BepInEx.Logging;
 using BepInEx.Unity.IL2CPP;
 using BulwarkStudios.GameSystems.Ui;
@@ -24,21 +23,46 @@ public class Plugin : BasePlugin
 {
     private const string Guid = "captnced.MoreSpeedOptions";
     private const string Name = "MoreSpeedOptions";
-    private const string Version = "1.0.0";
+    private const string Version = "1.1.0";
     internal new static ManualLogSource Log;
-    internal static ConfigFile config;
+    private static bool enabled;
+    private static Harmony harmony;
 
     public override void Load()
     {
         Log = base.Log;
-        config = Config;
-        ButtonManager.addButton("Super Faster", "Hotkey for changing the game speed to two times the max", 8, KeyCode.Alpha4);
-        ButtonManager.addButton("Super Fastest", "Hotkey for changing the game speed to four times the max", 16, KeyCode.Alpha5);
-        var harmony = new Harmony(Guid);
+        harmony = new Harmony(Guid);
+        if (IL2CPPChainloader.Instance.Plugins.ContainsKey("captnced.IMHelper")) enabled = ModsMenu.isSelfEnabled();
+        if (!enabled)
+            Log.LogInfo("Disabled by IMHelper!");
+        else
+            init();
+    }
+
+    private static void init()
+    {
+        ButtonManager.addButton("Super Faster", "Hotkey for changing the game speed to two times the max", 8,
+            KeyCode.Alpha4);
+        ButtonManager.addButton("Super Fastest", "Hotkey for changing the game speed to four times the max", 16,
+            KeyCode.Alpha5);
         harmony.PatchAll();
         foreach (var patch in harmony.GetPatchedMethods())
             Log.LogInfo("Patched " + patch.DeclaringType + ":" + patch.Name);
         Log.LogInfo("Loaded \"" + Name + "\" version " + Version + "!");
+    }
+
+    private static void disable()
+    {
+        ButtonManager.destroyButtons();
+        harmony.UnpatchSelf();
+        Log.LogInfo("Unloaded \"" + Name + "\" version " + Version + "!");
+    }
+
+    public static void enable(bool value)
+    {
+        enabled = value;
+        if (enabled) init();
+        else disable();
     }
 }
 
@@ -104,10 +128,16 @@ public class ButtonManager
     public static int buttonsCount;
     public static List<Button> buttons = new();
     public static SettingsHelper.SettingsSection buttonSection = new("MoreSpeedOptions");
-    public static UIPauseStripes pause;
+
+    public static void destroyButtons()
+    {
+        buttonSection.destroySection();
+        buttonSection = null;
+    }
 
     public static void addButton(string name, string description, int speed, KeyCode defaultKey)
     {
+        buttonSection ??= new SettingsHelper.SettingsSection("MoreSpeedOptions");
         buttons.Add(new Button(name, description, speed, defaultKey));
     }
 
@@ -125,7 +155,7 @@ public class ButtonManager
             uiButton.add_OnTriggered(buttonSelected);
         }
 
-        pause = GameObject.Find("Canvas/Pause").GetComponent<UIPauseStripes>();
+        GameObject.Find("Canvas/Pause").GetComponent<UIPauseStripes>();
     }
 
     public static void timeChanged(string buttonName)
@@ -139,7 +169,7 @@ public class ButtonManager
     public static void deselectAllOtherButtons(string except)
     {
         foreach (var uiButton in GameObject.Find("SuperFast").transform.parent.GetComponentsInChildren<UiButton>())
-            if (!(uiButton.gameObject.name == except))
+            if (uiButton.gameObject.name != except)
             {
                 uiButton.overridedState = false;
                 uiButton.UpdateState(UiButton.STATE.NORMAL);

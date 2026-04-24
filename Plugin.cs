@@ -18,12 +18,12 @@ namespace MoreSpeedOptions;
 
 [BepInPlugin(Guid, Name, Version)]
 [BepInProcess("IXION.exe")]
-[BepInDependency("captnced.IMHelper")]
+[BepInDependency("captnced.IMHelper", ">=3.3.0")]
 public class Plugin : BasePlugin
 {
     private const string Guid = "captnced.MoreSpeedOptions";
     private const string Name = "MoreSpeedOptions";
-    private const string Version = "1.1.0";
+    private const string Version = "1.1.1";
     internal new static ManualLogSource Log;
     private static bool enabled;
     private static Harmony harmony;
@@ -75,7 +75,7 @@ public class Button
         name = Name;
         speed = Speed;
         key = DefaultKey;
-        _ = new SettingsHelper.KeySetting(ButtonManager.buttonSection, Name, description, key, trigger, true);
+        ButtonManager.buttonSection.addItem(new SettingsHelper.KeySetting(Name, description, key, trigger, true));
         ButtonManager.buttonsCount++;
     }
 
@@ -123,21 +123,25 @@ public class Button
     }
 }
 
-public class ButtonManager
+public static class ButtonManager
 {
     public static int buttonsCount;
     public static List<Button> buttons = new();
-    public static SettingsHelper.SettingsSection buttonSection = new("MoreSpeedOptions");
+    public static SettingsHelper.SettingsSection buttonSection;
 
     public static void destroyButtons()
     {
-        buttonSection.destroySection();
+        buttonSection.destroy();
         buttonSection = null;
     }
 
     public static void addButton(string name, string description, int speed, KeyCode defaultKey)
     {
-        buttonSection ??= new SettingsHelper.SettingsSection("MoreSpeedOptions");
+        if (buttonSection == null)
+        {
+            buttonSection = new SettingsHelper.SettingsSection("MoreSpeedOptions");
+            SettingsHelper.addTopSection(buttonSection);
+        }
         buttons.Add(new Button(name, description, speed, defaultKey));
     }
 
